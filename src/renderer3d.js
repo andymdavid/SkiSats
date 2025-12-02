@@ -112,9 +112,185 @@ function createPlayerMesh() {
   group.userData.bodyGroup = bodyGroup;
   group.userData.leftSki = leftSki;
   group.userData.rightSki = rightSki;
+  group.userData.head = head;
+  group.userData.helmet = helmet;
+  group.userData.torso = torso;
+  group.userData.leftArm = leftArm;
+  group.userData.rightArm = rightArm;
+  group.userData.leftLeg = leftLeg;
+  group.userData.rightLeg = rightLeg;
+  group.userData.leftPole = leftPole;
+  group.userData.rightPole = rightPole;
+  group.userData.isCrashed = false;
+
+  // Store original positions and rotations for reset
+  group.userData.originalState = {
+    leftArm: { pos: leftArm.position.clone(), rot: leftArm.rotation.clone() },
+    rightArm: { pos: rightArm.position.clone(), rot: rightArm.rotation.clone() },
+    leftLeg: { pos: leftLeg.position.clone(), rot: leftLeg.rotation.clone() },
+    rightLeg: { pos: rightLeg.position.clone(), rot: rightLeg.rotation.clone() },
+    leftPole: { pos: leftPole.position.clone(), rot: leftPole.rotation.clone() },
+    rightPole: { pos: rightPole.position.clone(), rot: rightPole.rotation.clone() },
+    leftSki: { pos: leftSki.position.clone(), rot: leftSki.rotation.clone() },
+    rightSki: { pos: rightSki.position.clone(), rot: rightSki.rotation.clone() },
+    bodyGroup: { rot: new THREE.Euler(0, 0, 0) }
+  };
 
   group.position.y = 0;
   return group;
+}
+
+function triggerPlayerCrash() {
+  if (!playerMesh || playerMesh.userData.isCrashed) return;
+
+  playerMesh.userData.isCrashed = true;
+
+  // Randomly tangle the limbs
+  const leftArmCrash = {
+    rotation: new THREE.Euler(
+      (Math.random() - 0.5) * Math.PI,
+      (Math.random() - 0.5) * Math.PI,
+      Math.random() * Math.PI - Math.PI / 4
+    ),
+    position: new THREE.Vector3(-3 + Math.random() * 2, 9 + Math.random() * 2, Math.random() * 3)
+  };
+
+  const rightArmCrash = {
+    rotation: new THREE.Euler(
+      (Math.random() - 0.5) * Math.PI,
+      (Math.random() - 0.5) * Math.PI,
+      -Math.random() * Math.PI + Math.PI / 4
+    ),
+    position: new THREE.Vector3(3 - Math.random() * 2, 9 + Math.random() * 2, Math.random() * 3)
+  };
+
+  const leftLegCrash = {
+    rotation: new THREE.Euler(
+      (Math.random() - 0.5) * Math.PI / 2,
+      (Math.random() - 0.5) * Math.PI / 2,
+      Math.random() * Math.PI / 4
+    ),
+    position: new THREE.Vector3(-1.3 + Math.random() * 1, 4.5, Math.random() * 2)
+  };
+
+  const rightLegCrash = {
+    rotation: new THREE.Euler(
+      (Math.random() - 0.5) * Math.PI / 2,
+      (Math.random() - 0.5) * Math.PI / 2,
+      -Math.random() * Math.PI / 4
+    ),
+    position: new THREE.Vector3(1.3 - Math.random() * 1, 4.5, Math.random() * 2)
+  };
+
+  // Ski poles flying
+  const leftPoleCrash = {
+    rotation: new THREE.Euler(
+      Math.random() * Math.PI,
+      Math.random() * Math.PI,
+      Math.random() * Math.PI
+    ),
+    position: new THREE.Vector3(-5 + Math.random() * 2, 8 + Math.random() * 4, 2 + Math.random() * 3)
+  };
+
+  const rightPoleCrash = {
+    rotation: new THREE.Euler(
+      Math.random() * Math.PI,
+      Math.random() * Math.PI,
+      Math.random() * Math.PI
+    ),
+    position: new THREE.Vector3(5 - Math.random() * 2, 8 + Math.random() * 4, 2 + Math.random() * 3)
+  };
+
+  // Skis in wild positions
+  const leftSkiCrash = {
+    rotation: new THREE.Euler(
+      Math.random() * Math.PI - Math.PI / 2,
+      Math.random() * Math.PI,
+      Math.random() * Math.PI - Math.PI / 2
+    ),
+    position: new THREE.Vector3(-2 + Math.random() * 3, 0.8 + Math.random() * 2, Math.random() * 3)
+  };
+
+  const rightSkiCrash = {
+    rotation: new THREE.Euler(
+      Math.random() * Math.PI - Math.PI / 2,
+      Math.random() * Math.PI,
+      Math.random() * Math.PI - Math.PI / 2
+    ),
+    position: new THREE.Vector3(2 - Math.random() * 3, 0.8 + Math.random() * 2, Math.random() * 3)
+  };
+
+  // Apply crash animations
+  playerMesh.userData.leftArm.position.copy(leftArmCrash.position);
+  playerMesh.userData.leftArm.rotation.copy(leftArmCrash.rotation);
+
+  playerMesh.userData.rightArm.position.copy(rightArmCrash.position);
+  playerMesh.userData.rightArm.rotation.copy(rightArmCrash.rotation);
+
+  playerMesh.userData.leftLeg.position.copy(leftLegCrash.position);
+  playerMesh.userData.leftLeg.rotation.copy(leftLegCrash.rotation);
+
+  playerMesh.userData.rightLeg.position.copy(rightLegCrash.position);
+  playerMesh.userData.rightLeg.rotation.copy(rightLegCrash.rotation);
+
+  playerMesh.userData.leftPole.position.copy(leftPoleCrash.position);
+  playerMesh.userData.leftPole.rotation.copy(leftPoleCrash.rotation);
+
+  playerMesh.userData.rightPole.position.copy(rightPoleCrash.position);
+  playerMesh.userData.rightPole.rotation.copy(rightPoleCrash.rotation);
+
+  playerMesh.userData.leftSki.position.copy(leftSkiCrash.position);
+  playerMesh.userData.leftSki.rotation.copy(leftSkiCrash.rotation);
+
+  playerMesh.userData.rightSki.position.copy(rightSkiCrash.position);
+  playerMesh.userData.rightSki.rotation.copy(rightSkiCrash.rotation);
+
+  // Tilt the whole body
+  playerMesh.userData.bodyGroup.rotation.x = (Math.random() - 0.5) * Math.PI / 3;
+  playerMesh.userData.bodyGroup.rotation.z = (Math.random() - 0.5) * Math.PI / 2;
+}
+
+function resetPlayerCrash() {
+  if (!playerMesh || !playerMesh.userData.isCrashed) return;
+
+  playerMesh.userData.isCrashed = false;
+
+  const orig = playerMesh.userData.originalState;
+
+  // Reset all body parts to original state
+  playerMesh.userData.leftArm.position.copy(orig.leftArm.pos);
+  playerMesh.userData.leftArm.rotation.copy(orig.leftArm.rot);
+
+  playerMesh.userData.rightArm.position.copy(orig.rightArm.pos);
+  playerMesh.userData.rightArm.rotation.copy(orig.rightArm.rot);
+
+  playerMesh.userData.leftLeg.position.copy(orig.leftLeg.pos);
+  playerMesh.userData.leftLeg.rotation.copy(orig.leftLeg.rot);
+
+  playerMesh.userData.rightLeg.position.copy(orig.rightLeg.pos);
+  playerMesh.userData.rightLeg.rotation.copy(orig.rightLeg.rot);
+
+  playerMesh.userData.leftPole.position.copy(orig.leftPole.pos);
+  playerMesh.userData.leftPole.rotation.copy(orig.leftPole.rot);
+
+  playerMesh.userData.rightPole.position.copy(orig.rightPole.pos);
+  playerMesh.userData.rightPole.rotation.copy(orig.rightPole.rot);
+
+  playerMesh.userData.leftSki.position.copy(orig.leftSki.pos);
+  playerMesh.userData.leftSki.rotation.copy(orig.leftSki.rot);
+
+  playerMesh.userData.rightSki.position.copy(orig.rightSki.pos);
+  playerMesh.userData.rightSki.rotation.copy(orig.rightSki.rot);
+
+  playerMesh.userData.bodyGroup.rotation.copy(orig.bodyGroup.rot);
+}
+
+export function playerCrashAnimation() {
+  triggerPlayerCrash();
+}
+
+export function resetPlayerAnimation() {
+  resetPlayerCrash();
 }
 
 function createObstacleMesh(treeType = 'normal') {
@@ -547,6 +723,11 @@ export function updatePlayer3D(player) {
   }
   playerMesh.position.x = player.x * rendererConfig.xScale;
   playerMesh.position.z = 0;
+
+  // Don't apply normal animations if crashed
+  if (playerMesh.userData.isCrashed) {
+    return;
+  }
 
   // Calculate lean based on input
   let targetLean = 0;

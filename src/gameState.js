@@ -19,11 +19,13 @@ import {
 const { GAME_STATES } = CONFIG;
 
 export class GameStateManager {
-  constructor({ player }) {
+  constructor({ player, onCrash, onReset }) {
     this.player = player;
     this.currentState = GAME_STATES.MENU;
     this.currentSats = 0;
     this.lastRunStats = null;
+    this.onCrash = onCrash;
+    this.onReset = onReset;
   }
 
   setState(newState) {
@@ -37,6 +39,10 @@ export class GameStateManager {
     this.currentSats = 0;
     this.lastRunStats = null;
     this.setState(GAME_STATES.PLAYING);
+    // Reset player animation to normal
+    if (this.onReset) {
+      this.onReset();
+    }
   }
 
   handleGameOver() {
@@ -46,6 +52,10 @@ export class GameStateManager {
       sats: this.currentSats,
     };
     this.setState(GAME_STATES.GAME_OVER);
+    // Trigger crash animation
+    if (this.onCrash) {
+      this.onCrash();
+    }
   }
 
   update(dt) {

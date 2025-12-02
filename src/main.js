@@ -11,6 +11,8 @@ import {
   updateObstacles3D,
   updateCoins3D,
   updateShrubs3D,
+  playerCrashAnimation,
+  resetPlayerAnimation,
 } from './renderer3d.js';
 import { getWorldObstacles, getWorldCoins, getWorldShrubs } from './world.js';
 
@@ -19,7 +21,11 @@ const ctx = canvas.getContext('2d');
 const threeContainer = document.getElementById('three-container');
 
 const player = new Player();
-const stateManager = new GameStateManager({ player });
+const stateManager = new GameStateManager({
+  player,
+  onCrash: playerCrashAnimation,
+  onReset: resetPlayerAnimation
+});
 
 function resizeCanvas() {
   canvas.width = window.innerWidth;
