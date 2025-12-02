@@ -4,11 +4,13 @@ const worldState = {
   markers: [],
   obstacles: [],
   coins: [],
+  shrubs: [],
   boundaryObstacles: [],
   initialized: false,
   nextSpawnY: 0,
   nextObstacleY: 0,
   nextCoinY: 0,
+  nextShrubY: 0,
   nextBoundaryY: 0,
 };
 
@@ -42,6 +44,14 @@ function randomCoinX() {
   return clampedMin + Math.random() * (clampedMax - clampedMin);
 }
 
+function randomShrubX() {
+  const halfSlope = CONFIG.slopeWidth / 2;
+  const { minX, maxX } = CONFIG.shrubs;
+  const clampedMin = Math.max(minX, -halfSlope);
+  const clampedMax = Math.min(maxX, halfSlope);
+  return clampedMin + Math.random() * (clampedMax - clampedMin);
+}
+
 function getBaseScale(canvasWidth) {
   const unitsToPixels = (canvasWidth / CONFIG.slopeWidth) * 0.5;
   return unitsToPixels * CONFIG.projection.horizontalScale;
@@ -51,10 +61,12 @@ export function initWorld() {
   worldState.markers = [];
   worldState.obstacles = [];
   worldState.coins = [];
+  worldState.shrubs = [];
   worldState.boundaryObstacles = [];
   worldState.nextSpawnY = 0;
   worldState.nextObstacleY = 0;
   worldState.nextCoinY = 0;
+  worldState.nextShrubY = 0;
   worldState.nextBoundaryY = 0;
   worldState.initialized = true;
 }
@@ -95,6 +107,17 @@ export function resetWorld(playerDistance = 0) {
   }
   worldState.nextCoinY = coinY;
 
+  worldState.shrubs.length = 0;
+  worldState.nextShrubY = Math.max(playerDistance, CONFIG.shrubs.startDistance);
+  let shrubY = Math.max(playerDistance + CONFIG.shrubs.spawnInterval, CONFIG.shrubs.startDistance + CONFIG.shrubs.spawnInterval);
+  while (shrubY < limit) {
+    if (shrubY >= CONFIG.shrubs.startDistance && Math.random() < CONFIG.shrubs.probability) {
+      worldState.shrubs.push({ x: randomShrubX(), y: shrubY, isOnFire: false, processed: false });
+    }
+    shrubY += CONFIG.shrubs.spawnInterval;
+  }
+  worldState.nextShrubY = shrubY;
+
   worldState.boundaryObstacles.length = 0;
   worldState.nextBoundaryY = playerDistance;
   const boundaryInterval = 60;
@@ -116,6 +139,7 @@ export function updateWorld(dt, playerDistance) {
   worldState.markers = worldState.markers.filter((marker) => marker.y >= playerDistance);
   worldState.obstacles = worldState.obstacles.filter((obstacle) => obstacle.y >= playerDistance - CONFIG.render3d.behindDistance);
   worldState.coins = worldState.coins.filter((coin) => coin.y >= playerDistance - CONFIG.render3d.behindDistance);
+  worldState.shrubs = worldState.shrubs.filter((shrub) => shrub.y >= playerDistance - CONFIG.render3d.behindDistance);
   worldState.boundaryObstacles = worldState.boundaryObstacles.filter((obstacle) => obstacle.y >= playerDistance - CONFIG.render3d.behindDistance);
 
   const visibleLimit = playerDistance + CONFIG.viewDistance;
@@ -130,6 +154,7 @@ export function updateWorld(dt, playerDistance) {
 
   spawnObstacles(playerDistance);
   spawnCoins(playerDistance);
+  spawnShrubs(playerDistance);
   spawnBoundaryObstacles(playerDistance);
 }
 
@@ -159,6 +184,26 @@ function spawnCoins(playerDistance) {
     if (Math.random() < probability) {
       const coinY = playerDistance + CONFIG.viewDistance;
       worldState.coins.push({ x: randomCoinX(), y: coinY });
+    }
+  }
+}
+
+function spawnShrubs(playerDistance) {
+  const { spawnInterval, probability, startDistance } = CONFIG.shrubs;
+  if (!worldState.nextShrubY) {
+    worldState.nextShrubY = Math.max(playerDistance + spawnInterval, startDistance);
+  }
+
+  // Don't spawn shrubs until player has reached startDistance
+  if (playerDistance < startDistance) {
+    return;
+  }
+
+  while (playerDistance >= worldState.nextShrubY) {
+    worldState.nextShrubY += spawnInterval;
+    if (Math.random() < probability) {
+      const shrubY = playerDistance + CONFIG.viewDistance;
+      worldState.shrubs.push({ x: randomShrubX(), y: shrubY, isOnFire: false, processed: false });
     }
   }
 }
@@ -234,6 +279,30 @@ export function getWorldObstacles() {
 
 export function getWorldCoins() {
   return worldState.coins;
+}
+
+export function getWorldShrubs() {
+  return worldState.shrubs;
+}
+
+export function checkPlayerShrubCollision(player) {
+  const playerY = player.distance;
+  const playerRadius = CONFIG.collisions.playerRadius;
+  const shrubRadius = CONFIG.shrubs.collisionRadius;
+  const radiusSum = playerRadius + shrubRadius;
+  const radiusSquared = radiusSum * radiusSum;
+
+  const collidedShrubs = [];
+
+  worldState.shrubs.forEach((shrub) => {
+    const dx = shrub.x - player.x;
+    const dy = shrub.y - playerY;
+    if (dx * dx + dy * dy <= radiusSquared) {
+      collidedShrubs.push(shrub);
+    }
+  });
+
+  return collidedShrubs;
 }
 
 export function checkPlayerObstacleCollision(player) {

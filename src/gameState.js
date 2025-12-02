@@ -4,6 +4,7 @@ import {
   resetWorld,
   updateWorld,
   checkPlayerObstacleCollision,
+  checkPlayerShrubCollision,
   collectCoinsForPlayer,
 } from './world.js';
 import {
@@ -62,6 +63,43 @@ export class GameStateManager {
         if (collected > 0) {
           this.currentSats += collected * CONFIG.coins.satsPerCoin;
         }
+
+        // Check shrub collisions - strict single shrub processing with cooldown
+        if (this.player.shrubCollisionCooldown <= 0) {
+          const collidedShrubs = checkPlayerShrubCollision(this.player);
+          if (collidedShrubs.length > 0) {
+            // Find the closest shrub
+            let closestShrub = null;
+            let minDistanceSquared = Infinity;
+
+            collidedShrubs.forEach((shrub) => {
+              const dx = shrub.x - this.player.x;
+              const dy = shrub.y - this.player.distance;
+              const distSquared = dx * dx + dy * dy;
+
+              // Only consider shrubs within very close range (3 units)
+              if (distSquared < 9 && distSquared < minDistanceSquared) {
+                minDistanceSquared = distSquared;
+                closestShrub = shrub;
+              }
+            });
+
+            // Only process if we found a very close shrub
+            if (closestShrub && !closestShrub.processed) {
+              if (this.player.speed >= CONFIG.shrubs.fireSpeedThreshold) {
+                // High speed - set shrub on fire
+                closestShrub.isOnFire = true;
+              } else {
+                // Low speed - slow down player
+                this.player.speed *= CONFIG.shrubs.speedSlowdown;
+              }
+              closestShrub.processed = true;
+              // Set cooldown to prevent processing another shrub immediately
+              this.player.shrubCollisionCooldown = 0.5;
+            }
+          }
+        }
+
         if (checkPlayerObstacleCollision(this.player)) {
           this.handleGameOver();
         }

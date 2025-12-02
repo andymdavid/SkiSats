@@ -10,11 +10,17 @@ export class Player {
     this.x = 0;
     this.distance = 0;
     this.speed = CONFIG.playerBaseSpeed;
+    this.shrubCollisionCooldown = 0;
   }
 
   update(dt = 0) {
     this.speed = Math.min(this.speed + CONFIG.playerSpeedAcceleration * dt, CONFIG.playerMaxSpeed);
     this.distance += this.speed * dt;
+
+    // Decrement shrub collision cooldown
+    if (this.shrubCollisionCooldown > 0) {
+      this.shrubCollisionCooldown -= dt;
+    }
 
     let horizontalInput = 0;
     if (isLeftPressed()) {

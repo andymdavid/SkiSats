@@ -10,8 +10,9 @@ import {
   updateCamera3D,
   updateObstacles3D,
   updateCoins3D,
+  updateShrubs3D,
 } from './renderer3d.js';
-import { getWorldObstacles, getWorldCoins } from './world.js';
+import { getWorldObstacles, getWorldCoins, getWorldShrubs } from './world.js';
 
 const canvas = document.getElementById(CONFIG.canvasId);
 const ctx = canvas.getContext('2d');
@@ -51,6 +52,7 @@ function gameLoop(timestamp) {
   updateCamera3D(player, CONFIG);
   updateObstacles3D(getWorldObstacles(), player.distance);
   updateCoins3D(getWorldCoins(), player.distance);
+  updateShrubs3D(getWorldShrubs(), player.distance);
 
   render3DFrame();
   ctx.clearRect(0, 0, canvas.width, canvas.height);

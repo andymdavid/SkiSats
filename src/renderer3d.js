@@ -18,6 +18,7 @@ let rendererConfig = {
 };
 const obstacleMeshes = [];
 const coinMeshes = [];
+const shrubMeshes = [];
 
 function createGroundPlane() {
   const geometry = new THREE.PlaneGeometry(2000, 2000, 1, 1);
@@ -226,6 +227,169 @@ function createBitcoinSymbol(material) {
   symbolGroup.add(bar);
 
   return symbolGroup;
+}
+
+function createShrubMesh() {
+  const group = new THREE.Group();
+
+  // Create a bushy shrub with multiple spheres
+  const bushMaterial = new THREE.MeshStandardMaterial({
+    color: 0x2d5016,
+    flatShading: true
+  });
+
+  // Main bush body - larger sphere
+  const mainBushGeometry = new THREE.SphereGeometry(3, 8, 8);
+  const mainBush = new THREE.Mesh(mainBushGeometry, bushMaterial);
+  mainBush.position.y = 2.5;
+  mainBush.scale.set(1, 0.8, 1); // Slightly flattened
+  group.add(mainBush);
+
+  // Additional smaller spheres for bushier look
+  const smallBushGeometry = new THREE.SphereGeometry(2, 8, 8);
+
+  const leftBush = new THREE.Mesh(smallBushGeometry, bushMaterial);
+  leftBush.position.set(-2, 2, 0);
+  leftBush.scale.set(0.9, 0.7, 0.9);
+  group.add(leftBush);
+
+  const rightBush = new THREE.Mesh(smallBushGeometry, bushMaterial);
+  rightBush.position.set(2, 2, 0);
+  rightBush.scale.set(0.9, 0.7, 0.9);
+  group.add(rightBush);
+
+  const frontBush = new THREE.Mesh(smallBushGeometry, bushMaterial);
+  frontBush.position.set(0, 2.5, 2);
+  frontBush.scale.set(0.8, 0.7, 0.8);
+  group.add(frontBush);
+
+  // Store references for fire effect
+  group.userData.bushParts = [mainBush, leftBush, rightBush, frontBush];
+  group.userData.isOnFire = false;
+  group.userData.originalColor = 0x2d5016;
+  group.userData.fireParticles = [];
+  group.userData.smokeParticles = [];
+
+  group.visible = false;
+  return group;
+}
+
+function createFireParticle() {
+  const geometry = new THREE.SphereGeometry(0.4, 8, 8);
+  const material = new THREE.MeshBasicMaterial({
+    color: 0xff6600,
+    transparent: true,
+    opacity: 1
+  });
+  const particle = new THREE.Mesh(geometry, material);
+  particle.userData.lifetime = 0;
+  particle.userData.maxLifetime = 0.8 + Math.random() * 0.4;
+  particle.userData.velocity = {
+    x: (Math.random() - 0.5) * 2,
+    y: 3 + Math.random() * 2,
+    z: (Math.random() - 0.5) * 2
+  };
+  return particle;
+}
+
+function createSmokeParticle() {
+  const geometry = new THREE.SphereGeometry(0.6, 8, 8);
+  const material = new THREE.MeshBasicMaterial({
+    color: 0x555555,
+    transparent: true,
+    opacity: 0.6
+  });
+  const particle = new THREE.Mesh(geometry, material);
+  particle.userData.lifetime = 0;
+  particle.userData.maxLifetime = 1.2 + Math.random() * 0.6;
+  particle.userData.velocity = {
+    x: (Math.random() - 0.5) * 1.5,
+    y: 2 + Math.random() * 1,
+    z: (Math.random() - 0.5) * 1.5
+  };
+  return particle;
+}
+
+function updateFireParticles(shrubMesh, dt) {
+  if (!shrubMesh.userData.fireParticles) return;
+
+  // Update existing particles
+  shrubMesh.userData.fireParticles.forEach((particle, index) => {
+    particle.userData.lifetime += dt;
+    const progress = particle.userData.lifetime / particle.userData.maxLifetime;
+
+    if (progress >= 1) {
+      shrubMesh.remove(particle);
+      shrubMesh.userData.fireParticles.splice(index, 1);
+      return;
+    }
+
+    // Move particle
+    particle.position.x += particle.userData.velocity.x * dt;
+    particle.position.y += particle.userData.velocity.y * dt;
+    particle.position.z += particle.userData.velocity.z * dt;
+
+    // Fade out and change color (yellow to red)
+    particle.material.opacity = 1 - progress;
+    const colorValue = Math.floor((1 - progress) * 255);
+    particle.material.color.setRGB(1, colorValue / 255, 0);
+  });
+
+  // Update smoke particles
+  shrubMesh.userData.smokeParticles.forEach((particle, index) => {
+    particle.userData.lifetime += dt;
+    const progress = particle.userData.lifetime / particle.userData.maxLifetime;
+
+    if (progress >= 1) {
+      shrubMesh.remove(particle);
+      shrubMesh.userData.smokeParticles.splice(index, 1);
+      return;
+    }
+
+    // Move particle
+    particle.position.x += particle.userData.velocity.x * dt;
+    particle.position.y += particle.userData.velocity.y * dt;
+    particle.position.z += particle.userData.velocity.z * dt;
+
+    // Fade out and expand
+    particle.material.opacity = 0.6 * (1 - progress);
+    particle.scale.setScalar(1 + progress * 2);
+  });
+
+  // Spawn new particles if on fire
+  if (Math.random() < 0.8) {
+    const fireParticle = createFireParticle();
+    fireParticle.position.set(
+      (Math.random() - 0.5) * 4,
+      2,
+      (Math.random() - 0.5) * 4
+    );
+    shrubMesh.add(fireParticle);
+    shrubMesh.userData.fireParticles.push(fireParticle);
+  }
+
+  if (Math.random() < 0.4) {
+    const smokeParticle = createSmokeParticle();
+    smokeParticle.position.set(
+      (Math.random() - 0.5) * 4,
+      3,
+      (Math.random() - 0.5) * 4
+    );
+    shrubMesh.add(smokeParticle);
+    shrubMesh.userData.smokeParticles.push(smokeParticle);
+  }
+}
+
+function getOrCreateShrubMesh(index) {
+  if (!slopeGroup) {
+    return null;
+  }
+  if (!shrubMeshes[index]) {
+    const mesh = createShrubMesh();
+    shrubMeshes[index] = mesh;
+    slopeGroup.add(mesh);
+  }
+  return shrubMeshes[index];
 }
 
 function getOrCreateObstacleMesh(index) {
@@ -442,6 +606,84 @@ export function updateCoins3D(coins = [], playerDistance = 0) {
   for (let i = coins.length; i < coinMeshes.length; i += 1) {
     if (coinMeshes[i]) {
       coinMeshes[i].visible = false;
+    }
+  }
+}
+
+export function updateShrubs3D(shrubs = [], playerDistance = 0) {
+  if (!shrubs) {
+    shrubs = [];
+  }
+
+  const dt = 1 / 60; // Approximate delta time
+
+  shrubs.forEach((shrub, index) => {
+    const mesh = getOrCreateShrubMesh(index);
+    if (!mesh) {
+      return;
+    }
+    const depth = shrub.y - playerDistance;
+    if (depth < -rendererConfig.behindDistance || depth > rendererConfig.viewDistance) {
+      mesh.visible = false;
+      return;
+    }
+    mesh.position.x = shrub.x * rendererConfig.xScale;
+    mesh.position.z = -depth * rendererConfig.depthScale;
+    mesh.position.y = 0;
+
+    // Update fire effect based on shrub state
+    if (mesh.userData.bushParts) {
+      if (shrub.isOnFire) {
+        // Set on fire
+        mesh.userData.bushParts.forEach((part) => {
+          part.material.color.setHex(0xff4500);
+          part.material.emissive.setHex(0xff6600);
+          part.material.emissiveIntensity = 0.5;
+        });
+        // Update fire particles
+        updateFireParticles(mesh, dt);
+      } else {
+        // Reset to normal green
+        mesh.userData.bushParts.forEach((part) => {
+          part.material.color.setHex(mesh.userData.originalColor);
+          part.material.emissive.setHex(0x000000);
+          part.material.emissiveIntensity = 0;
+        });
+        // Clear any existing particles
+        if (mesh.userData.fireParticles) {
+          mesh.userData.fireParticles.forEach(p => mesh.remove(p));
+          mesh.userData.fireParticles = [];
+        }
+        if (mesh.userData.smokeParticles) {
+          mesh.userData.smokeParticles.forEach(p => mesh.remove(p));
+          mesh.userData.smokeParticles = [];
+        }
+      }
+    }
+
+    mesh.visible = true;
+  });
+
+  for (let i = shrubs.length; i < shrubMeshes.length; i += 1) {
+    if (shrubMeshes[i]) {
+      shrubMeshes[i].visible = false;
+      // Reset any lingering fire effects
+      if (shrubMeshes[i].userData.bushParts) {
+        shrubMeshes[i].userData.bushParts.forEach((part) => {
+          part.material.color.setHex(shrubMeshes[i].userData.originalColor);
+          part.material.emissive.setHex(0x000000);
+          part.material.emissiveIntensity = 0;
+        });
+      }
+      // Clear particles
+      if (shrubMeshes[i].userData.fireParticles) {
+        shrubMeshes[i].userData.fireParticles.forEach(p => shrubMeshes[i].remove(p));
+        shrubMeshes[i].userData.fireParticles = [];
+      }
+      if (shrubMeshes[i].userData.smokeParticles) {
+        shrubMeshes[i].userData.smokeParticles.forEach(p => shrubMeshes[i].remove(p));
+        shrubMeshes[i].userData.smokeParticles = [];
+      }
     }
   }
 }

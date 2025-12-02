@@ -45,6 +45,16 @@ export const CONFIG = {
     collisionRadius: 3.5,
     satsPerCoin: 1,
   },
+  shrubs: {
+    spawnInterval: 35,
+    probability: 0.4,
+    minX: -90,
+    maxX: 90,
+    collisionRadius: 4,
+    speedSlowdown: 0.6,
+    fireSpeedThreshold: 150,
+    startDistance: 150,
+  },
   collisions: {
     playerRadius: 4,
     obstacleRadius: 5,
