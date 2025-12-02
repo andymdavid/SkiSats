@@ -4,10 +4,12 @@ const worldState = {
   markers: [],
   obstacles: [],
   coins: [],
+  boundaryObstacles: [],
   initialized: false,
   nextSpawnY: 0,
   nextObstacleY: 0,
   nextCoinY: 0,
+  nextBoundaryY: 0,
 };
 
 function randomX() {
@@ -49,9 +51,11 @@ export function initWorld() {
   worldState.markers = [];
   worldState.obstacles = [];
   worldState.coins = [];
+  worldState.boundaryObstacles = [];
   worldState.nextSpawnY = 0;
   worldState.nextObstacleY = 0;
   worldState.nextCoinY = 0;
+  worldState.nextBoundaryY = 0;
   worldState.initialized = true;
 }
 
@@ -70,9 +74,38 @@ export function resetWorld(playerDistance = 0) {
   }
   worldState.nextSpawnY = markerY;
   worldState.obstacles.length = 0;
-  worldState.nextObstacleY = playerDistance + CONFIG.obstacles.spawnInterval;
+  worldState.nextObstacleY = playerDistance;
+  let obstacleY = playerDistance + CONFIG.obstacles.spawnInterval;
+  while (obstacleY < limit) {
+    if (Math.random() < CONFIG.obstacles.probability) {
+      worldState.obstacles.push({ x: randomObstacleX(), y: obstacleY });
+    }
+    obstacleY += CONFIG.obstacles.spawnInterval;
+  }
+  worldState.nextObstacleY = obstacleY;
+
   worldState.coins.length = 0;
-  worldState.nextCoinY = playerDistance + CONFIG.coins.spawnInterval;
+  worldState.nextCoinY = playerDistance;
+  let coinY = playerDistance + CONFIG.coins.spawnInterval;
+  while (coinY < limit) {
+    if (Math.random() < CONFIG.coins.probability) {
+      worldState.coins.push({ x: randomCoinX(), y: coinY });
+    }
+    coinY += CONFIG.coins.spawnInterval;
+  }
+  worldState.nextCoinY = coinY;
+
+  worldState.boundaryObstacles.length = 0;
+  worldState.nextBoundaryY = playerDistance;
+  const boundaryInterval = 60;
+  const halfWidth = CONFIG.slopeWidth / 2;
+  let boundaryY = playerDistance + boundaryInterval;
+  while (boundaryY < limit) {
+    worldState.boundaryObstacles.push({ x: -halfWidth, y: boundaryY });
+    worldState.boundaryObstacles.push({ x: halfWidth, y: boundaryY });
+    boundaryY += boundaryInterval;
+  }
+  worldState.nextBoundaryY = boundaryY;
 }
 
 export function updateWorld(dt, playerDistance) {
@@ -81,8 +114,9 @@ export function updateWorld(dt, playerDistance) {
   }
 
   worldState.markers = worldState.markers.filter((marker) => marker.y >= playerDistance);
-  worldState.obstacles = worldState.obstacles.filter((obstacle) => obstacle.y >= playerDistance);
-  worldState.coins = worldState.coins.filter((coin) => coin.y >= playerDistance);
+  worldState.obstacles = worldState.obstacles.filter((obstacle) => obstacle.y >= playerDistance - CONFIG.render3d.behindDistance);
+  worldState.coins = worldState.coins.filter((coin) => coin.y >= playerDistance - CONFIG.render3d.behindDistance);
+  worldState.boundaryObstacles = worldState.boundaryObstacles.filter((obstacle) => obstacle.y >= playerDistance - CONFIG.render3d.behindDistance);
 
   const visibleLimit = playerDistance + CONFIG.viewDistance;
   let spawnY = Math.max(worldState.nextSpawnY, worldState.markers.reduce((max, marker) => Math.max(max, marker.y), playerDistance));
@@ -96,6 +130,7 @@ export function updateWorld(dt, playerDistance) {
 
   spawnObstacles(playerDistance);
   spawnCoins(playerDistance);
+  spawnBoundaryObstacles(playerDistance);
 }
 
 function spawnObstacles(playerDistance) {
@@ -128,6 +163,22 @@ function spawnCoins(playerDistance) {
   }
 }
 
+function spawnBoundaryObstacles(playerDistance) {
+  const boundaryInterval = 60;
+  const halfWidth = CONFIG.slopeWidth / 2;
+
+  if (!worldState.nextBoundaryY) {
+    worldState.nextBoundaryY = playerDistance + boundaryInterval;
+  }
+
+  while (playerDistance >= worldState.nextBoundaryY) {
+    worldState.nextBoundaryY += boundaryInterval;
+    const boundaryY = playerDistance + CONFIG.viewDistance;
+    worldState.boundaryObstacles.push({ x: -halfWidth, y: boundaryY });
+    worldState.boundaryObstacles.push({ x: halfWidth, y: boundaryY });
+  }
+}
+
 function projectPoint(entity, playerDistance, canvasWidth, canvasHeight) {
   const depth = entity.y - playerDistance;
   if (depth < 0 || depth > CONFIG.viewDistance) {
@@ -154,92 +205,6 @@ function projectPoint(entity, playerDistance, canvasWidth, canvasHeight) {
   };
 }
 
-export function renderWorld(ctx, playerDistance, canvasWidth, canvasHeight) {
-  const horizonY = canvasHeight * CONFIG.slopeScreen.horizonRatio;
-  const bottomY = canvasHeight * CONFIG.slopeScreen.bottomRatio;
-  const centerX = canvasWidth / 2;
-  const halfSlope = CONFIG.slopeWidth / 2;
-  const baseScale = getBaseScale(canvasWidth);
-  const widthFactorBottom = 1 - 0.5 * 0;
-  const widthFactorTop = 1 - 0.5 * 1;
-  const bottomHalfWidth = halfSlope * baseScale * widthFactorBottom;
-  const topHalfWidth = halfSlope * baseScale * widthFactorTop;
-
-  ctx.save();
-  ctx.fillStyle = '#bfe3ff';
-  ctx.fillRect(0, 0, canvasWidth, horizonY);
-  ctx.fillStyle = '#f6fbff';
-  ctx.fillRect(0, horizonY, canvasWidth, canvasHeight - horizonY);
-
-  ctx.beginPath();
-  ctx.moveTo(centerX - topHalfWidth, horizonY);
-  ctx.lineTo(centerX + topHalfWidth, horizonY);
-  ctx.lineTo(centerX + bottomHalfWidth, bottomY);
-  ctx.lineTo(centerX - bottomHalfWidth, bottomY);
-  ctx.closePath();
-  ctx.fillStyle = '#ffffff';
-  ctx.fill();
-
-  const markers = [...worldState.markers].sort((a, b) => b.y - a.y);
-  ctx.fillStyle = '#8a9aac';
-  markers.forEach((marker) => {
-    const projection = projectPoint(marker, playerDistance, canvasWidth, canvasHeight);
-    if (!projection.visible) {
-      return;
-    }
-
-    const radius = 6 * projection.scale;
-    ctx.beginPath();
-    ctx.ellipse(
-      projection.screenX,
-      projection.screenY,
-      radius * 0.6,
-      radius,
-      0,
-      0,
-      Math.PI * 2,
-    );
-    ctx.fill();
-  });
-
-  ctx.restore();
-}
-
-export function renderObstacles(ctx, playerDistance, canvasWidth, canvasHeight) {
-  const sorted = [...worldState.obstacles].sort((a, b) => b.y - a.y);
-  ctx.save();
-  ctx.fillStyle = '#5c5c5c';
-  sorted.forEach((obstacle) => {
-    const projection = projectPoint(obstacle, playerDistance, canvasWidth, canvasHeight);
-    if (!projection.visible) {
-      return;
-    }
-
-    const size = CONFIG.obstacles.size * projection.scale * 1.5;
-    ctx.beginPath();
-    ctx.rect(projection.screenX - size / 2, projection.screenY - size, size, size);
-    ctx.fill();
-  });
-  ctx.restore();
-}
-
-export function renderCoins(ctx, playerDistance, canvasWidth, canvasHeight) {
-  const sorted = [...worldState.coins].sort((a, b) => b.y - a.y);
-  ctx.save();
-  ctx.fillStyle = CONFIG.coins.color;
-  sorted.forEach((coin) => {
-    const projection = projectPoint(coin, playerDistance, canvasWidth, canvasHeight);
-    if (!projection.visible) {
-      return;
-    }
-
-    const radius = CONFIG.coins.size * projection.scale * 1.5;
-    ctx.beginPath();
-    ctx.arc(projection.screenX, projection.screenY, radius, 0, Math.PI * 2);
-    ctx.fill();
-  });
-  ctx.restore();
-}
 
 export function collectCoinsForPlayer(player) {
   const playerY = player.distance;
@@ -263,6 +228,14 @@ export function collectCoinsForPlayer(player) {
   return collected;
 }
 
+export function getWorldObstacles() {
+  return [...worldState.obstacles, ...worldState.boundaryObstacles];
+}
+
+export function getWorldCoins() {
+  return worldState.coins;
+}
+
 export function checkPlayerObstacleCollision(player) {
   const playerY = player.distance;
   const playerRadius = CONFIG.collisions.playerRadius;
@@ -270,11 +243,13 @@ export function checkPlayerObstacleCollision(player) {
   const radiusSum = playerRadius + obstacleRadius;
   const radiusSquared = radiusSum * radiusSum;
 
-  return worldState.obstacles.some((obstacle) => {
+  const checkCollision = (obstacle) => {
     const dx = obstacle.x - player.x;
     const dy = obstacle.y - playerY;
     return dx * dx + dy * dy <= radiusSquared;
-  });
+  };
+
+  return worldState.obstacles.some(checkCollision) || worldState.boundaryObstacles.some(checkCollision);
 }
 
 initWorld();

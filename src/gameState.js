@@ -3,9 +3,6 @@ import { wasKeyPressed } from './input.js';
 import {
   resetWorld,
   updateWorld,
-  renderWorld,
-  renderObstacles,
-  renderCoins,
   checkPlayerObstacleCollision,
   collectCoinsForPlayer,
 } from './world.js';
@@ -112,19 +109,10 @@ export class GameStateManager {
   }
 
   renderPlaying(ctx, { width, height }) {
-    renderWorld(ctx, this.player.distance, width, height);
-    renderObstacles(ctx, this.player.distance, width, height);
-    renderCoins(ctx, this.player.distance, width, height);
-    this.player.render(ctx, width, height);
     renderHUD(ctx, width, height, this.player.distance, this.currentSats);
   }
 
   renderGameOver(ctx, { width, height }) {
-    renderWorld(ctx, this.player.distance, width, height);
-    renderObstacles(ctx, this.player.distance, width, height);
-    renderCoins(ctx, this.player.distance, width, height);
-    this.player.render(ctx, width, height);
-
     const stats = this.lastRunStats || {
       distance: this.player.distance,
       time: getElapsedTime(),
