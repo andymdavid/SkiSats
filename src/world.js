@@ -52,6 +52,21 @@ function randomShrubX() {
   return clampedMin + Math.random() * (clampedMax - clampedMin);
 }
 
+function randomTreeType() {
+  const types = CONFIG.obstacles.treeTypes;
+  const rand = Math.random();
+  let cumulative = 0;
+
+  for (const [type, probability] of Object.entries(types)) {
+    cumulative += probability;
+    if (rand <= cumulative) {
+      return type;
+    }
+  }
+
+  return 'normal';
+}
+
 function getBaseScale(canvasWidth) {
   const unitsToPixels = (canvasWidth / CONFIG.slopeWidth) * 0.5;
   return unitsToPixels * CONFIG.projection.horizontalScale;
@@ -90,7 +105,7 @@ export function resetWorld(playerDistance = 0) {
   let obstacleY = playerDistance + CONFIG.obstacles.spawnInterval;
   while (obstacleY < limit) {
     if (Math.random() < CONFIG.obstacles.probability) {
-      worldState.obstacles.push({ x: randomObstacleX(), y: obstacleY });
+      worldState.obstacles.push({ x: randomObstacleX(), y: obstacleY, treeType: randomTreeType() });
     }
     obstacleY += CONFIG.obstacles.spawnInterval;
   }
@@ -168,7 +183,7 @@ function spawnObstacles(playerDistance) {
     worldState.nextObstacleY += spawnInterval;
     if (Math.random() < probability) {
       const obstacleY = playerDistance + CONFIG.viewDistance;
-      worldState.obstacles.push({ x: randomObstacleX(), y: obstacleY });
+      worldState.obstacles.push({ x: randomObstacleX(), y: obstacleY, treeType: randomTreeType() });
     }
   }
 }

@@ -34,6 +34,11 @@ export const CONFIG = {
     minX: -100,
     maxX: 100,
     size: 6,
+    treeTypes: {
+      normal: 0.75,   // 75% normal trees
+      tall: 0.15,     // 15% tall pine trees
+      short: 0.10,    // 10% short bushy trees
+    },
   },
   coins: {
     spawnInterval: 40,

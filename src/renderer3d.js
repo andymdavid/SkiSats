@@ -117,21 +117,56 @@ function createPlayerMesh() {
   return group;
 }
 
-function createObstacleMesh() {
+function createObstacleMesh(treeType = 'normal') {
   const group = new THREE.Group();
 
-  const trunkGeometry = new THREE.CylinderGeometry(2.66, 2.66, 16, 6);
-  const trunkMaterial = new THREE.MeshStandardMaterial({ color: 0x8b5a2b, flatShading: true });
-  const trunk = new THREE.Mesh(trunkGeometry, trunkMaterial);
-  trunk.position.y = 8;
-  group.add(trunk);
+  if (treeType === 'tall') {
+    // Tall pine tree - very tall and narrow
+    const trunkGeometry = new THREE.CylinderGeometry(2, 2, 24, 6);
+    const trunkMaterial = new THREE.MeshStandardMaterial({ color: 0x654321, flatShading: true });
+    const trunk = new THREE.Mesh(trunkGeometry, trunkMaterial);
+    trunk.position.y = 12;
+    group.add(trunk);
 
-  const foliageGeometry = new THREE.ConeGeometry(13.33, 32, 6);
-  const foliageMaterial = new THREE.MeshStandardMaterial({ color: 0x1f8a4b, flatShading: true });
-  const foliage = new THREE.Mesh(foliageGeometry, foliageMaterial);
-  foliage.position.y = 32;
-  group.add(foliage);
+    // Multiple layers of thin foliage
+    for (let i = 0; i < 4; i++) {
+      const foliageGeometry = new THREE.ConeGeometry(7 - i * 1.2, 12, 6);
+      const foliageMaterial = new THREE.MeshStandardMaterial({ color: 0x0d4d2d, flatShading: true });
+      const foliage = new THREE.Mesh(foliageGeometry, foliageMaterial);
+      foliage.position.y = 16 + i * 10;
+      group.add(foliage);
+    }
+  } else if (treeType === 'short') {
+    // Short bushy tree - short and wide
+    const trunkGeometry = new THREE.CylinderGeometry(2, 2, 8, 6);
+    const trunkMaterial = new THREE.MeshStandardMaterial({ color: 0x8b5a2b, flatShading: true });
+    const trunk = new THREE.Mesh(trunkGeometry, trunkMaterial);
+    trunk.position.y = 4;
+    group.add(trunk);
 
+    // Wide, round bushy top
+    const foliageGeometry = new THREE.SphereGeometry(10, 8, 8);
+    const foliageMaterial = new THREE.MeshStandardMaterial({ color: 0x2d6e3f, flatShading: true });
+    const foliage = new THREE.Mesh(foliageGeometry, foliageMaterial);
+    foliage.position.y = 12;
+    foliage.scale.y = 0.8;
+    group.add(foliage);
+  } else {
+    // Normal tree (default)
+    const trunkGeometry = new THREE.CylinderGeometry(2.66, 2.66, 16, 6);
+    const trunkMaterial = new THREE.MeshStandardMaterial({ color: 0x8b5a2b, flatShading: true });
+    const trunk = new THREE.Mesh(trunkGeometry, trunkMaterial);
+    trunk.position.y = 8;
+    group.add(trunk);
+
+    const foliageGeometry = new THREE.ConeGeometry(13.33, 32, 6);
+    const foliageMaterial = new THREE.MeshStandardMaterial({ color: 0x1f8a4b, flatShading: true });
+    const foliage = new THREE.Mesh(foliageGeometry, foliageMaterial);
+    foliage.position.y = 32;
+    group.add(foliage);
+  }
+
+  group.userData.treeType = treeType;
   group.visible = false;
   return group;
 }
@@ -392,15 +427,26 @@ function getOrCreateShrubMesh(index) {
   return shrubMeshes[index];
 }
 
-function getOrCreateObstacleMesh(index) {
+function getOrCreateObstacleMesh(index, treeType = 'normal') {
   if (!slopeGroup) {
     return null;
   }
-  if (!obstacleMeshes[index]) {
-    const mesh = createObstacleMesh();
-    obstacleMeshes[index] = mesh;
-    slopeGroup.add(mesh);
+
+  // Check if mesh exists and has correct tree type
+  if (obstacleMeshes[index] && obstacleMeshes[index].userData.treeType === treeType) {
+    return obstacleMeshes[index];
   }
+
+  // Remove old mesh if tree type changed
+  if (obstacleMeshes[index]) {
+    slopeGroup.remove(obstacleMeshes[index]);
+  }
+
+  // Create new mesh with correct type
+  const mesh = createObstacleMesh(treeType);
+  obstacleMeshes[index] = mesh;
+  slopeGroup.add(mesh);
+
   return obstacleMeshes[index];
 }
 
@@ -547,7 +593,8 @@ export function updateObstacles3D(obstacles = [], playerDistance = 0) {
     obstacles = [];
   }
   obstacles.forEach((obstacle, index) => {
-    const mesh = getOrCreateObstacleMesh(index);
+    const treeType = obstacle.treeType || 'normal';
+    const mesh = getOrCreateObstacleMesh(index, treeType);
     if (!mesh) {
       return;
     }
