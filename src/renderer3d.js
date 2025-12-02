@@ -1,4 +1,5 @@
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.161.0/build/three.module.js';
+import { isLeftPressed, isRightPressed } from './input.js';
 
 let renderer;
 let scene;
@@ -29,24 +30,87 @@ function createGroundPlane() {
 
 function createPlayerMesh() {
   const group = new THREE.Group();
+  const bodyGroup = new THREE.Group();
 
-  const bodyGeometry = new THREE.CapsuleGeometry(3, 8, 4, 8);
-  const bodyMaterial = new THREE.MeshStandardMaterial({ color: 0xf25f5c });
-  const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
-  body.position.y = 5;
-  group.add(body);
-
-  const headGeometry = new THREE.SphereGeometry(3, 16, 16);
+  // Head
+  const headGeometry = new THREE.SphereGeometry(2.5, 16, 16);
   const headMaterial = new THREE.MeshStandardMaterial({ color: 0xffe0bd });
   const head = new THREE.Mesh(headGeometry, headMaterial);
-  head.position.y = 10;
-  group.add(head);
+  head.position.y = 14;
+  bodyGroup.add(head);
 
-  const skiGeometry = new THREE.BoxGeometry(12, 0.6, 2);
-  const skiMaterial = new THREE.MeshStandardMaterial({ color: 0x333333 });
-  const skis = new THREE.Mesh(skiGeometry, skiMaterial);
-  skis.position.y = 1;
-  group.add(skis);
+  // Helmet/goggles accent
+  const helmetGeometry = new THREE.SphereGeometry(2.7, 16, 16);
+  const helmetMaterial = new THREE.MeshStandardMaterial({ color: 0xff6b6b });
+  const helmet = new THREE.Mesh(helmetGeometry, helmetMaterial);
+  helmet.position.y = 14.5;
+  helmet.scale.y = 0.6;
+  bodyGroup.add(helmet);
+
+  // Torso (jacket)
+  const torsoGeometry = new THREE.BoxGeometry(4, 7, 3);
+  const torsoMaterial = new THREE.MeshStandardMaterial({ color: 0x4a90e2 });
+  const torso = new THREE.Mesh(torsoGeometry, torsoMaterial);
+  torso.position.y = 9;
+  bodyGroup.add(torso);
+
+  // Left arm
+  const armGeometry = new THREE.CapsuleGeometry(0.8, 6, 4, 8);
+  const armMaterial = new THREE.MeshStandardMaterial({ color: 0x4a90e2 });
+  const leftArm = new THREE.Mesh(armGeometry, armMaterial);
+  leftArm.position.set(-3, 9, 0);
+  leftArm.rotation.z = Math.PI / 6;
+  bodyGroup.add(leftArm);
+
+  // Right arm
+  const rightArm = new THREE.Mesh(armGeometry, armMaterial);
+  rightArm.position.set(3, 9, 0);
+  rightArm.rotation.z = -Math.PI / 6;
+  bodyGroup.add(rightArm);
+
+  // Legs/pants
+  const legGeometry = new THREE.CapsuleGeometry(1.2, 6, 4, 8);
+  const legMaterial = new THREE.MeshStandardMaterial({ color: 0x2c3e50 });
+  const leftLeg = new THREE.Mesh(legGeometry, legMaterial);
+  leftLeg.position.set(-1.3, 4.5, 0);
+  bodyGroup.add(leftLeg);
+
+  const rightLeg = new THREE.Mesh(legGeometry, legMaterial);
+  rightLeg.position.set(1.3, 4.5, 0);
+  bodyGroup.add(rightLeg);
+
+  // Left ski pole
+  const poleGeometry = new THREE.CylinderGeometry(0.2, 0.2, 12, 8);
+  const poleMaterial = new THREE.MeshStandardMaterial({ color: 0x888888 });
+  const leftPole = new THREE.Mesh(poleGeometry, poleMaterial);
+  leftPole.position.set(-4.5, 8, 2);
+  leftPole.rotation.x = Math.PI / 8;
+  bodyGroup.add(leftPole);
+
+  // Right ski pole
+  const rightPole = new THREE.Mesh(poleGeometry, poleMaterial);
+  rightPole.position.set(4.5, 8, 2);
+  rightPole.rotation.x = Math.PI / 8;
+  bodyGroup.add(rightPole);
+
+  group.add(bodyGroup);
+
+  // Left ski
+  const skiGeometry = new THREE.BoxGeometry(1.5, 0.4, 10);
+  const skiMaterial = new THREE.MeshStandardMaterial({ color: 0xff4444 });
+  const leftSki = new THREE.Mesh(skiGeometry, skiMaterial);
+  leftSki.position.set(-1.3, 0.8, 0);
+  group.add(leftSki);
+
+  // Right ski
+  const rightSki = new THREE.Mesh(skiGeometry, skiMaterial);
+  rightSki.position.set(1.3, 0.8, 0);
+  group.add(rightSki);
+
+  // Store references for animation
+  group.userData.bodyGroup = bodyGroup;
+  group.userData.leftSki = leftSki;
+  group.userData.rightSki = rightSki;
 
   group.position.y = 0;
   return group;
@@ -189,6 +253,31 @@ export function updatePlayer3D(player) {
   }
   playerMesh.position.x = player.x * rendererConfig.xScale;
   playerMesh.position.z = 0;
+
+  // Calculate lean based on input
+  let targetLean = 0;
+  if (isLeftPressed()) {
+    targetLean = 0.35;
+  } else if (isRightPressed()) {
+    targetLean = -0.35;
+  }
+
+  // Smooth lean transition
+  const leanSpeed = 8;
+  const currentLean = playerMesh.rotation.z || 0;
+  playerMesh.rotation.z = currentLean + (targetLean - currentLean) * 0.15;
+
+  // Lean the body more dramatically
+  if (playerMesh.userData.bodyGroup) {
+    playerMesh.userData.bodyGroup.rotation.z = playerMesh.rotation.z * 1.5;
+  }
+
+  // Tilt skis to show edge control
+  if (playerMesh.userData.leftSki && playerMesh.userData.rightSki) {
+    const skiTilt = playerMesh.rotation.z * 2;
+    playerMesh.userData.leftSki.rotation.x = skiTilt;
+    playerMesh.userData.rightSki.rotation.x = skiTilt;
+  }
 }
 
 export function updateCamera3D(/* player */) {
