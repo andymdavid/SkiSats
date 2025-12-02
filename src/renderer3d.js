@@ -136,12 +136,96 @@ function createObstacleMesh() {
 }
 
 function createCoinMesh() {
-  const geometry = new THREE.CylinderGeometry(2.2, 2.2, 0.8, 16);
-  const material = new THREE.MeshStandardMaterial({ color: 0xf4b942, metalness: 0.1, roughness: 0.6 });
-  const coin = new THREE.Mesh(geometry, material);
-  coin.rotation.x = Math.PI / 2;
-  coin.visible = false;
-  return coin;
+  const group = new THREE.Group();
+
+  // Main coin body with beveled edge
+  const coinGeometry = new THREE.CylinderGeometry(3, 3, 0.6, 32);
+  const coinMaterial = new THREE.MeshStandardMaterial({
+    color: 0xffc233,
+    metalness: 0.8,
+    roughness: 0.2
+  });
+  const coinBody = new THREE.Mesh(coinGeometry, coinMaterial);
+  coinBody.rotation.x = Math.PI / 2;
+  group.add(coinBody);
+
+  // Coin rim/edge (darker)
+  const rimGeometry = new THREE.CylinderGeometry(3.1, 3.1, 0.5, 32);
+  const rimMaterial = new THREE.MeshStandardMaterial({
+    color: 0xd4a017,
+    metalness: 0.9,
+    roughness: 0.4
+  });
+  const rim = new THREE.Mesh(rimGeometry, rimMaterial);
+  rim.rotation.x = Math.PI / 2;
+  rim.scale.set(1, 1, 1);
+  group.add(rim);
+
+  // Create Bitcoin "₿" symbol as flat embossed geometry
+  const symbolMaterial = new THREE.MeshStandardMaterial({
+    color: 0xd4a017,
+    metalness: 0.9,
+    roughness: 0.3
+  });
+
+  // Front face symbol
+  const symbolFront = createBitcoinSymbol(symbolMaterial);
+  symbolFront.position.z = 0.35;
+  group.add(symbolFront);
+
+  // Back face symbol
+  const symbolBack = createBitcoinSymbol(symbolMaterial);
+  symbolBack.position.z = -0.35;
+  symbolBack.rotation.y = Math.PI;
+  group.add(symbolBack);
+
+  group.visible = false;
+  group.userData.spinSpeed = 2 + Math.random() * 1.5;
+  group.userData.bounceOffset = Math.random() * Math.PI * 2;
+
+  return group;
+}
+
+function createBitcoinSymbol(material) {
+  const symbolGroup = new THREE.Group();
+
+  // Create a flatter, more coin-like "B" with stripes through it
+  // Vertical stripes of the B
+  const stripe1Geometry = new THREE.BoxGeometry(0.3, 3.5, 0.15);
+  const stripe1 = new THREE.Mesh(stripe1Geometry, material);
+  stripe1.position.set(-0.6, 0, 0);
+  symbolGroup.add(stripe1);
+
+  const stripe2Geometry = new THREE.BoxGeometry(0.3, 3.5, 0.15);
+  const stripe2 = new THREE.Mesh(stripe2Geometry, material);
+  stripe2.position.set(0.6, 0, 0);
+  symbolGroup.add(stripe2);
+
+  // Top arc of B
+  const arcTop = new THREE.Mesh(
+    new THREE.TorusGeometry(0.9, 0.25, 8, 16, Math.PI),
+    material
+  );
+  arcTop.rotation.z = -Math.PI / 2;
+  arcTop.position.set(0.1, 0.9, 0);
+  symbolGroup.add(arcTop);
+
+  // Bottom arc of B
+  const arcBottom = new THREE.Mesh(
+    new THREE.TorusGeometry(0.9, 0.25, 8, 16, Math.PI),
+    material
+  );
+  arcBottom.rotation.z = -Math.PI / 2;
+  arcBottom.position.set(0.1, -0.9, 0);
+  symbolGroup.add(arcBottom);
+
+  // Vertical bar of B
+  const barGeometry = new THREE.BoxGeometry(0.35, 4, 0.15);
+  const bar = new THREE.Mesh(barGeometry, material);
+  bar.position.set(-0.3, 0, 0);
+  symbolGroup.add(bar);
+
+  return symbolGroup;
 }
 
 function getOrCreateObstacleMesh(index) {
@@ -325,6 +409,8 @@ export function updateCoins3D(coins = [], playerDistance = 0) {
   if (!coins) {
     coins = [];
   }
+  const time = Date.now() * 0.001; // Convert to seconds
+
   coins.forEach((coin, index) => {
     const mesh = getOrCreateCoinMesh(index);
     if (!mesh) {
@@ -335,9 +421,21 @@ export function updateCoins3D(coins = [], playerDistance = 0) {
       mesh.visible = false;
       return;
     }
+
+    // Base position
     mesh.position.x = coin.x * rendererConfig.xScale;
     mesh.position.z = -depth * rendererConfig.depthScale;
-    mesh.position.y = 3;
+
+    // Higher off ground + subtle bouncing animation
+    const baseHeight = 8;
+    const bounceHeight = 1.5;
+    const bounceSpeed = 2.5;
+    const bounce = Math.sin(time * bounceSpeed + mesh.userData.bounceOffset) * bounceHeight;
+    mesh.position.y = baseHeight + bounce;
+
+    // Spinning animation
+    mesh.rotation.y = time * mesh.userData.spinSpeed;
+
     mesh.visible = true;
   });
 
