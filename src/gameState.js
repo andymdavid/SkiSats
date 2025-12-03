@@ -6,6 +6,8 @@ import {
   checkPlayerObstacleCollision,
   checkPlayerShrubCollision,
   collectCoinsForPlayer,
+  updateYeti,
+  checkYetiCollision,
 } from './world.js';
 import {
   resetHUD,
@@ -26,6 +28,7 @@ export class GameStateManager {
     this.lastRunStats = null;
     this.onCrash = onCrash;
     this.onReset = onReset;
+    this.yetiDistance = null;
   }
 
   setState(newState) {
@@ -58,6 +61,16 @@ export class GameStateManager {
     }
   }
 
+  handleYetiCatch() {
+    this.lastRunStats = {
+      distance: this.player.distance,
+      time: getElapsedTime(),
+      sats: this.currentSats,
+    };
+    this.setState(GAME_STATES.YETI_CAUGHT);
+    // Don't trigger crash animation - different death
+  }
+
   update(dt) {
     switch (this.currentState) {
       case GAME_STATES.MENU:
@@ -69,6 +82,16 @@ export class GameStateManager {
         this.player.update(dt);
         updateWorld(dt, this.player.distance);
         updateHUD(dt, this.player.distance, this.currentSats);
+
+        // Update yeti
+        updateYeti(dt, this.player, getElapsedTime());
+
+        // Check yeti collision first
+        if (checkYetiCollision(this.player)) {
+          this.handleYetiCatch();
+          break;
+        }
+
         const collected = collectCoinsForPlayer(this.player);
         if (collected > 0) {
           this.currentSats += collected * CONFIG.coins.satsPerCoin;
@@ -119,6 +142,11 @@ export class GameStateManager {
           this.startRun();
         }
         break;
+      case GAME_STATES.YETI_CAUGHT:
+        if (wasKeyPressed('Enter')) {
+          this.startRun();
+        }
+        break;
       default:
         break;
     }
@@ -135,6 +163,9 @@ export class GameStateManager {
       case GAME_STATES.GAME_OVER:
         this.renderGameOver(ctx, viewport);
         break;
+      case GAME_STATES.YETI_CAUGHT:
+        this.renderYetiGameOver(ctx, viewport);
+        break;
       default:
         break;
     }
@@ -148,15 +179,58 @@ export class GameStateManager {
     ctx.fillStyle = '#fff';
     ctx.textAlign = 'center';
 
-    ctx.font = `${Math.max(32, Math.floor(width * 0.05))}px 'Segoe UI', sans-serif`;
-    ctx.fillText('SkiSats', width / 2, height / 2 - 20);
+    // Title with retro 8-bit font and text shadow for depth
+    const titleSize = Math.max(32, Math.floor(width * 0.05));
+    ctx.font = `${titleSize}px 'Press Start 2P', monospace`;
 
-    ctx.font = `${Math.max(16, Math.floor(width * 0.02))}px 'Segoe UI', sans-serif`;
-    ctx.fillText('Press ENTER to start', width / 2, height / 2 + 30);
+    // Add shadow effect
+    ctx.shadowColor = 'rgba(255, 150, 0, 0.8)';
+    ctx.shadowBlur = 15;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 0;
+    ctx.fillStyle = '#FFD700';
+    ctx.fillText('SKISATS', width / 2, height / 2 - 20);
+
+    // Reset shadow
+    ctx.shadowColor = 'transparent';
+    ctx.shadowBlur = 0;
+
+    // Instructions with smaller retro font
+    ctx.fillStyle = '#fff';
+    const instructionSize = Math.max(12, Math.floor(width * 0.015));
+    ctx.font = `${instructionSize}px 'Press Start 2P', monospace`;
+    ctx.fillText('PRESS ENTER', width / 2, height / 2 + 40);
+    ctx.fillText('TO START', width / 2, height / 2 + 70);
     ctx.restore();
   }
 
   renderPlaying(ctx, { width, height }) {
+    ctx.save();
+
+    // Apply screen shake if yeti is close
+    if (this.yetiDistance !== null && this.yetiDistance < 50) {
+      const intensity = Math.max(0, 1 - this.yetiDistance / 50); // 0 to 1
+      const shakeAmount = intensity * 8;
+      const shakeX = (Math.random() - 0.5) * shakeAmount;
+      const shakeY = (Math.random() - 0.5) * shakeAmount;
+      ctx.translate(shakeX, shakeY);
+    }
+
+    // Render header title during gameplay
+    ctx.fillStyle = '#FFD700';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+
+    const headerSize = Math.max(18, Math.floor(width * 0.025));
+    ctx.font = `${headerSize}px 'Press Start 2P', monospace`;
+
+    // Add glow effect to header
+    ctx.shadowColor = 'rgba(255, 150, 0, 0.6)';
+    ctx.shadowBlur = 10;
+    ctx.fillText('SKISATS', width / 2, 20);
+
+    ctx.restore();
+
     renderHUD(ctx, width, height, this.player.distance, this.currentSats);
   }
 
@@ -168,21 +242,86 @@ export class GameStateManager {
     };
 
     ctx.save();
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
     ctx.fillRect(0, 0, width, height);
 
-    ctx.fillStyle = '#fff';
     ctx.textAlign = 'center';
-    ctx.font = '48px "Segoe UI", sans-serif';
-    ctx.fillText('GAME OVER', width / 2, height / 2 - 80);
 
-    ctx.font = '24px "Segoe UI", sans-serif';
+    // Game Over title with retro font
+    ctx.font = '36px "Press Start 2P", monospace';
+    ctx.fillStyle = '#FF4444';
+    ctx.shadowColor = 'rgba(255, 0, 0, 0.8)';
+    ctx.shadowBlur = 15;
+    ctx.fillText('GAME OVER', width / 2, height / 2 - 100);
+
+    // Reset shadow
+    ctx.shadowColor = 'transparent';
+    ctx.shadowBlur = 0;
+
+    // Stats with retro font and colors
+    ctx.font = '16px "Press Start 2P", monospace';
+
+    ctx.fillStyle = '#00FF00';
     ctx.fillText(`DISTANCE: ${formatDistance(stats.distance)}`, width / 2, height / 2 - 20);
+
+    ctx.fillStyle = '#00BFFF';
     ctx.fillText(`TIME: ${formatTime(stats.time)}`, width / 2, height / 2 + 20);
+
+    ctx.fillStyle = '#FFD700';
     ctx.fillText(`SATS: ${stats.sats}`, width / 2, height / 2 + 60);
 
-    ctx.font = '20px "Segoe UI", sans-serif';
-    ctx.fillText('Press ENTER to restart', width / 2, height / 2 + 110);
+    // Restart instruction
+    ctx.font = '12px "Press Start 2P", monospace';
+    ctx.fillStyle = '#fff';
+    ctx.fillText('PRESS ENTER', width / 2, height / 2 + 120);
+    ctx.fillText('TO RESTART', width / 2, height / 2 + 145);
+    ctx.restore();
+  }
+
+  renderYetiGameOver(ctx, { width, height }) {
+    const stats = this.lastRunStats || {
+      distance: this.player.distance,
+      time: getElapsedTime(),
+      sats: this.currentSats,
+    };
+
+    ctx.save();
+    ctx.fillStyle = 'rgba(20, 0, 0, 0.85)';  // Dark red tint
+    ctx.fillRect(0, 0, width, height);
+
+    ctx.textAlign = 'center';
+
+    // Yeti caught message
+    ctx.font = '28px "Press Start 2P", monospace';
+    ctx.fillStyle = '#FF6666';
+    ctx.shadowColor = 'rgba(255, 0, 0, 0.8)';
+    ctx.shadowBlur = 20;
+    ctx.fillText('CAUGHT BY', width / 2, height / 2 - 140);
+
+    ctx.font = '40px "Press Start 2P", monospace';
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillText('THE YETI!', width / 2, height / 2 - 90);
+
+    // Reset shadow
+    ctx.shadowColor = 'transparent';
+    ctx.shadowBlur = 0;
+
+    // Stats
+    ctx.font = '16px "Press Start 2P", monospace';
+    ctx.fillStyle = '#00FF00';
+    ctx.fillText(`DISTANCE: ${formatDistance(stats.distance)}`, width / 2, height / 2);
+
+    ctx.fillStyle = '#00BFFF';
+    ctx.fillText(`TIME: ${formatTime(stats.time)}`, width / 2, height / 2 + 40);
+
+    ctx.fillStyle = '#FFD700';
+    ctx.fillText(`SATS: ${stats.sats}`, width / 2, height / 2 + 80);
+
+    // Restart
+    ctx.font = '12px "Press Start 2P", monospace';
+    ctx.fillStyle = '#fff';
+    ctx.fillText('PRESS ENTER', width / 2, height / 2 + 140);
+    ctx.fillText('TO RESTART', width / 2, height / 2 + 165);
     ctx.restore();
   }
 }

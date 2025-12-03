@@ -19,6 +19,7 @@ let rendererConfig = {
 const obstacleMeshes = [];
 const coinMeshes = [];
 const shrubMeshes = [];
+let yetiMesh = null;
 
 function createGroundPlane() {
   const geometry = new THREE.PlaneGeometry(2000, 2000, 1, 1);
@@ -591,6 +592,165 @@ function updateFireParticles(shrubMesh, dt) {
   }
 }
 
+function createYetiMesh() {
+  const group = new THREE.Group();
+
+  // Fur material - slightly off-white with roughness
+  const furMaterial = new THREE.MeshStandardMaterial({
+    color: 0xDDDDDD,
+    flatShading: true,
+    roughness: 0.9,
+  });
+
+  // Large imposing body (bigger and more hunched)
+  const bodyGeometry = new THREE.BoxGeometry(16, 24, 12);
+  const body = new THREE.Mesh(bodyGeometry, furMaterial);
+  body.position.y = 14;
+  body.rotation.x = 0.1; // Slight forward hunch
+  group.add(body);
+
+  // Add fur tufts to body for texture (fixed positions for consistency)
+  const tuftPositions = [
+    [-5, 20, 4], [5, 20, 4], [-6, 15, 3], [6, 15, 3],
+    [0, 22, 5], [-3, 12, 4], [3, 12, 4], [0, 10, 3]
+  ];
+  tuftPositions.forEach(pos => {
+    const tuftGeometry = new THREE.SphereGeometry(2, 6, 6);
+    const tuft = new THREE.Mesh(tuftGeometry, furMaterial);
+    tuft.position.set(pos[0], pos[1], pos[2]);
+    group.add(tuft);
+  });
+
+  // Massive head
+  const headGeometry = new THREE.SphereGeometry(9, 8, 8);
+  const head = new THREE.Mesh(headGeometry, furMaterial);
+  head.position.y = 32;
+  head.scale.set(1, 0.9, 1.1); // Slightly squashed, forward-stretched
+  group.add(head);
+
+  // Snout/muzzle
+  const snoutGeometry = new THREE.BoxGeometry(6, 4, 4);
+  const snout = new THREE.Mesh(snoutGeometry, furMaterial);
+  snout.position.set(0, 30, 10);
+  group.add(snout);
+
+  // Menacing red eyes with glow
+  const eyeGeometry = new THREE.SphereGeometry(1.5, 8, 8);
+  const eyeMaterial = new THREE.MeshStandardMaterial({
+    color: 0xFF0000,
+    emissive: 0xFF0000,
+    emissiveIntensity: 1.2,
+  });
+
+  const leftEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
+  leftEye.position.set(-3.5, 33, 8);
+  group.add(leftEye);
+
+  const rightEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
+  rightEye.position.set(3.5, 33, 8);
+  group.add(rightEye);
+
+  // Eye glow effect
+  const glowGeometry = new THREE.SphereGeometry(2.5, 8, 8);
+  const glowMaterial = new THREE.MeshBasicMaterial({
+    color: 0xFF3333,
+    transparent: true,
+    opacity: 0.4,
+  });
+  const leftGlow = new THREE.Mesh(glowGeometry, glowMaterial);
+  leftGlow.position.set(-3.5, 33, 8);
+  group.add(leftGlow);
+
+  const rightGlow = new THREE.Mesh(glowGeometry, glowMaterial);
+  rightGlow.position.set(3.5, 33, 8);
+  group.add(rightGlow);
+
+  // Mouth with dark interior
+  const mouthGeometry = new THREE.BoxGeometry(4, 2, 2);
+  const mouthMaterial = new THREE.MeshStandardMaterial({
+    color: 0x220000,
+    flatShading: true,
+  });
+  const mouth = new THREE.Mesh(mouthGeometry, mouthMaterial);
+  mouth.position.set(0, 28, 11);
+  group.add(mouth);
+
+  // Teeth
+  const toothMaterial = new THREE.MeshStandardMaterial({ color: 0xFFFFFF });
+  const toothPositions = [-2, -1.2, -0.4, 0.4, 1.2, 2];
+  toothPositions.forEach(xPos => {
+    const toothGeometry = new THREE.ConeGeometry(0.5, 2, 4);
+    const tooth = new THREE.Mesh(toothGeometry, toothMaterial);
+    tooth.position.set(xPos, 29, 11);
+    tooth.rotation.x = Math.PI;
+    group.add(tooth);
+  });
+
+  // Long menacing arms reaching forward
+  const armGeometry = new THREE.CapsuleGeometry(3, 20, 4, 8);
+  const leftArm = new THREE.Mesh(armGeometry, furMaterial);
+  leftArm.position.set(-9, 18, 4);
+  leftArm.rotation.z = Math.PI / 5;
+  leftArm.rotation.x = -Math.PI / 6; // Reaching forward
+  group.add(leftArm);
+
+  const rightArm = new THREE.Mesh(armGeometry, furMaterial);
+  rightArm.position.set(9, 18, 4);
+  rightArm.rotation.z = -Math.PI / 5;
+  rightArm.rotation.x = -Math.PI / 6; // Reaching forward
+  group.add(rightArm);
+
+  // Clawed hands
+  const clawMaterial = new THREE.MeshStandardMaterial({ color: 0x333333 });
+  [-12, 12].forEach(handX => {
+    const handGeometry = new THREE.SphereGeometry(2.5, 6, 6);
+    const hand = new THREE.Mesh(handGeometry, furMaterial);
+    hand.position.set(handX, 12, 12);
+    group.add(hand);
+
+    // Claws
+    [-1.2, 0, 1.2].forEach(clawOffset => {
+      const clawGeometry = new THREE.ConeGeometry(0.4, 3, 4);
+      const claw = new THREE.Mesh(clawGeometry, clawMaterial);
+      claw.position.set(handX + clawOffset, 10, 13);
+      claw.rotation.x = Math.PI / 2;
+      group.add(claw);
+    });
+  });
+
+  // Thick powerful legs
+  const legGeometry = new THREE.CapsuleGeometry(4, 14, 4, 8);
+  const leftLeg = new THREE.Mesh(legGeometry, furMaterial);
+  leftLeg.position.set(-5, 5, 0);
+  group.add(leftLeg);
+
+  const rightLeg = new THREE.Mesh(legGeometry, furMaterial);
+  rightLeg.position.set(5, 5, 0);
+  group.add(rightLeg);
+
+  // Large feet
+  const footGeometry = new THREE.BoxGeometry(4, 2, 6);
+  const leftFoot = new THREE.Mesh(footGeometry, furMaterial);
+  leftFoot.position.set(-5, 0, 2);
+  group.add(leftFoot);
+
+  const rightFoot = new THREE.Mesh(footGeometry, furMaterial);
+  rightFoot.position.set(5, 0, 2);
+  group.add(rightFoot);
+
+  // Store references for animation
+  group.userData.leftArm = leftArm;
+  group.userData.rightArm = rightArm;
+  group.userData.body = body;
+  group.userData.leftEye = leftEye;
+  group.userData.rightEye = rightEye;
+  group.userData.leftGlow = leftGlow;
+  group.userData.rightGlow = rightGlow;
+
+  group.visible = false;
+  return group;
+}
+
 function getOrCreateShrubMesh(index) {
   if (!slopeGroup) {
     return null;
@@ -914,4 +1074,73 @@ export function updateShrubs3D(shrubs = [], playerDistance = 0) {
       }
     }
   }
+}
+
+export function updateYeti3D(yeti, playerDistance) {
+  if (!yeti || !yeti.active) {
+    if (yetiMesh) {
+      yetiMesh.visible = false;
+    }
+    return null;
+  }
+
+  if (!yetiMesh && slopeGroup) {
+    try {
+      yetiMesh = createYetiMesh();
+      slopeGroup.add(yetiMesh);
+    } catch (error) {
+      console.error('Error creating yeti mesh:', error);
+      return null;
+    }
+  }
+
+  if (!yetiMesh) {
+    return null;
+  }
+
+  const depth = yeti.y - playerDistance;
+  if (depth < -rendererConfig.behindDistance || depth > rendererConfig.viewDistance) {
+    yetiMesh.visible = false;
+    return null;
+  }
+
+  yetiMesh.position.x = yeti.x * rendererConfig.xScale;
+  yetiMesh.position.z = -depth * rendererConfig.depthScale;
+  yetiMesh.position.y = 0;
+
+  const time = Date.now() * 0.001;
+
+  // Aggressive running animation - faster bobbing
+  const bobSpeed = 6;
+  const bobAmount = 3;
+  const swingSpeed = 5;
+
+  yetiMesh.position.y += Math.sin(time * bobSpeed) * bobAmount;
+
+  // Swing arms menacingly
+  if (yetiMesh.userData.leftArm && yetiMesh.userData.rightArm) {
+    const swingAmount = 0.3;
+    yetiMesh.userData.leftArm.rotation.x = -Math.PI / 6 + Math.sin(time * swingSpeed) * swingAmount;
+    yetiMesh.userData.rightArm.rotation.x = -Math.PI / 6 + Math.sin(time * swingSpeed + Math.PI) * swingAmount;
+  }
+
+  // Body lurching forward
+  if (yetiMesh.userData.body) {
+    yetiMesh.userData.body.rotation.x = 0.1 + Math.sin(time * bobSpeed) * 0.1;
+  }
+
+  // Pulsing eye glow (more intense when closer)
+  if (yetiMesh.userData.leftGlow && yetiMesh.userData.rightGlow) {
+    const pulseIntensity = 0.3 + Math.sin(time * 3) * 0.15;
+    yetiMesh.userData.leftGlow.material.opacity = pulseIntensity;
+    yetiMesh.userData.rightGlow.material.opacity = pulseIntensity;
+  }
+
+  // Slight side-to-side sway as it runs
+  yetiMesh.rotation.y = Math.sin(time * swingSpeed) * 0.1;
+
+  yetiMesh.visible = true;
+
+  // Return distance for screen shake calculation
+  return Math.abs(depth);
 }

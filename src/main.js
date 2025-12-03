@@ -11,10 +11,11 @@ import {
   updateObstacles3D,
   updateCoins3D,
   updateShrubs3D,
+  updateYeti3D,
   playerCrashAnimation,
   resetPlayerAnimation,
 } from './renderer3d.js';
-import { getWorldObstacles, getWorldCoins, getWorldShrubs } from './world.js';
+import { getWorldObstacles, getWorldCoins, getWorldShrubs, getYeti } from './world.js';
 
 const canvas = document.getElementById(CONFIG.canvasId);
 const ctx = canvas.getContext('2d');
@@ -59,6 +60,11 @@ function gameLoop(timestamp) {
   updateObstacles3D(getWorldObstacles(), player.distance);
   updateCoins3D(getWorldCoins(), player.distance);
   updateShrubs3D(getWorldShrubs(), player.distance);
+
+  // Add yeti update
+  const yeti = getYeti();
+  const yetiDistance = updateYeti3D(yeti, player.distance);
+  stateManager.yetiDistance = yetiDistance;  // For screen shake
 
   render3DFrame();
   ctx.clearRect(0, 0, canvas.width, canvas.height);

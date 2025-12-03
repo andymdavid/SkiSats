@@ -12,6 +12,10 @@ const worldState = {
   nextCoinY: 0,
   nextShrubY: 0,
   nextBoundaryY: 0,
+  yeti: null,
+  yetiSpawned: false,
+  yetiEnabledThisGame: false,
+  lastYetiSpawnCheck: 0,
 };
 
 function randomX() {
@@ -92,6 +96,12 @@ export function resetWorld(playerDistance = 0) {
   } else {
     worldState.markers.length = 0;
   }
+
+  // Reset yeti and randomly decide if yeti will spawn this game
+  worldState.yeti = null;
+  worldState.yetiSpawned = false;
+  worldState.yetiEnabledThisGame = Math.random() < CONFIG.yeti.gameSpawnProbability;
+  worldState.lastYetiSpawnCheck = 0;
 
   let markerY = playerDistance;
   const limit = playerDistance + CONFIG.viewDistance;
@@ -334,6 +344,84 @@ export function checkPlayerObstacleCollision(player) {
   };
 
   return worldState.obstacles.some(checkCollision) || worldState.boundaryObstacles.some(checkCollision);
+}
+
+function initYeti(playerDistance) {
+  if (worldState.yetiSpawned) {
+    return;
+  }
+
+  const spawnX = (Math.random() > 0.5 ? 1 : -1) * CONFIG.yeti.spawnOffsetX;
+  const spawnY = playerDistance - CONFIG.yeti.spawnDistanceBehind;
+
+  worldState.yeti = {
+    x: spawnX,
+    y: spawnY,
+    speed: CONFIG.yeti.baseSpeed,
+    active: true,
+  };
+
+  worldState.yetiSpawned = true;
+}
+
+export function updateYeti(dt, player, elapsedTime) {
+  // Safety check for invalid dt values
+  if (!dt || dt <= 0 || dt > 1 || !player) {
+    return;
+  }
+
+  // Check if yeti should spawn (only if enabled for this game)
+  if (!worldState.yetiSpawned && worldState.yetiEnabledThisGame) {
+    // Only check after minimum spawn time
+    if (elapsedTime >= CONFIG.yeti.minSpawnTime) {
+      // Check at intervals to avoid checking every frame
+      if (elapsedTime - worldState.lastYetiSpawnCheck >= CONFIG.yeti.spawnCheckInterval) {
+        worldState.lastYetiSpawnCheck = elapsedTime;
+
+        // Random chance to spawn
+        if (Math.random() < CONFIG.yeti.spawnChancePerCheck) {
+          initYeti(player.distance);
+        }
+      }
+    }
+  }
+
+  if (!worldState.yeti || !worldState.yeti.active) {
+    return;
+  }
+
+  // Accelerate yeti
+  worldState.yeti.speed += CONFIG.yeti.acceleration * dt;
+  worldState.yeti.speed = Math.min(worldState.yeti.speed, CONFIG.yeti.maxSpeed);
+
+  // Move forward
+  worldState.yeti.y += worldState.yeti.speed * dt;
+
+  // Track player laterally
+  const dx = player.x - worldState.yeti.x;
+  const moveX = Math.sign(dx) * Math.min(Math.abs(dx), CONFIG.yeti.lateralSpeed * dt);
+  worldState.yeti.x += moveX;
+}
+
+export function checkYetiCollision(player) {
+  if (!worldState.yeti || !worldState.yeti.active) {
+    return false;
+  }
+
+  const playerY = player.distance;
+  const playerRadius = CONFIG.collisions.playerRadius;
+  const yetiRadius = CONFIG.yeti.collisionRadius;
+  const radiusSum = playerRadius + yetiRadius;
+  const radiusSquared = radiusSum * radiusSum;
+
+  const dx = worldState.yeti.x - player.x;
+  const dy = worldState.yeti.y - playerY;
+
+  return dx * dx + dy * dy <= radiusSquared;
+}
+
+export function getYeti() {
+  return worldState.yeti;
 }
 
 initWorld();

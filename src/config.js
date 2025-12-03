@@ -64,9 +64,24 @@ export const CONFIG = {
     playerRadius: 4,
     obstacleRadius: 5,
   },
+  yeti: {
+    minSpawnTime: 45,            // Earliest possible spawn (45 seconds)
+    spawnCheckInterval: 1.0,     // Check for spawn every 1 second
+    spawnChancePerCheck: 0.04,   // 4% chance per check after minSpawnTime (avg spawn ~70-80s)
+    gameSpawnProbability: 0.85,  // 85% chance yeti will spawn at all this game
+    spawnDistanceBehind: 80,     // Start 80 units behind player
+    spawnOffsetX: 60,            // Spawn from corner (±60 X offset)
+    baseSpeed: 100,              // Initial speed (faster than player base)
+    acceleration: 15,            // Speed increase per second (aggressive)
+    maxSpeed: 500,               // Cap to prevent infinite acceleration
+    lateralSpeed: 45,            // How fast yeti tracks player X position
+    collisionRadius: 6,          // Catch radius
+    catchTime: 17,               // Target catch time in seconds (middle of 15-20)
+  },
   GAME_STATES: {
     MENU: 'MENU',
     PLAYING: 'PLAYING',
     GAME_OVER: 'GAME_OVER',
+    YETI_CAUGHT: 'YETI_CAUGHT',
   },
 };

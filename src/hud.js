@@ -26,31 +26,53 @@ export function formatTime(seconds) {
 }
 
 export function renderHUD(ctx, canvasWidth, canvasHeight, playerDistance, sats = 0) {
-  const padding = 12;
-  const panelWidth = 180;
-  const panelHeight = 90;
+  const padding = 16;
+  const panelWidth = 280;
+  const panelHeight = 130;
   const x = padding;
-  const y = padding;
+  const y = 70; // Move down to avoid overlapping with header title
 
   ctx.save();
-  ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+
+  // Draw background with border
+  ctx.fillStyle = 'rgba(0, 20, 40, 0.85)';
   ctx.fillRect(x, y, panelWidth, panelHeight);
 
-  ctx.fillStyle = '#ffffff';
-  ctx.font = '14px "Segoe UI", sans-serif';
+  // Add retro-style border
+  ctx.strokeStyle = '#FFD700';
+  ctx.lineWidth = 3;
+  ctx.strokeRect(x, y, panelWidth, panelHeight);
+
+  // Inner border for depth
+  ctx.strokeStyle = 'rgba(255, 215, 0, 0.4)';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(x + 4, y + 4, panelWidth - 8, panelHeight - 8);
+
+  // Stats with retro font
+  ctx.fillStyle = '#FFD700';
+  ctx.font = '10px "Press Start 2P", monospace';
   ctx.textAlign = 'left';
   ctx.textBaseline = 'top';
 
-  const lines = [
-    `DISTANCE: ${formatDistance(playerDistance)}`,
-    `TIME: ${formatTime(hudState.elapsedTime)}`,
-    `SATS: ${sats}`,
+  const stats = [
+    { label: 'DISTANCE', value: formatDistance(playerDistance), color: '#00FF00' },
+    { label: 'TIME', value: formatTime(hudState.elapsedTime), color: '#00BFFF' },
+    { label: 'SATS', value: sats.toString(), color: '#FFD700' },
   ];
 
-  let lineY = y + 12;
-  lines.forEach((line) => {
-    ctx.fillText(line, x + 12, lineY);
-    lineY += 22;
+  let lineY = y + 20;
+  stats.forEach((stat) => {
+    // Label
+    ctx.fillStyle = '#AAAAAA';
+    ctx.fillText(stat.label, x + 16, lineY);
+
+    // Value with color
+    ctx.fillStyle = stat.color;
+    ctx.textAlign = 'right';
+    ctx.fillText(stat.value, x + panelWidth - 16, lineY);
+    ctx.textAlign = 'left';
+
+    lineY += 32;
   });
 
   ctx.restore();
