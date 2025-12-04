@@ -17,6 +17,7 @@ import {
   formatDistance,
   formatTime,
 } from './hud.js';
+import { soundManager } from './sound.js';
 
 const { GAME_STATES } = CONFIG;
 
@@ -36,6 +37,11 @@ export class GameStateManager {
   }
 
   startRun() {
+    // Initialize sound on first interaction
+    if (!soundManager.initialized) {
+      soundManager.init();
+    }
+
     this.player.reset();
     resetWorld(this.player.distance);
     resetHUD();
@@ -46,6 +52,9 @@ export class GameStateManager {
     if (this.onReset) {
       this.onReset();
     }
+
+    // Start skiing swoosh sound
+    soundManager.startSkiingSwoosh(this.player.speed);
   }
 
   handleGameOver() {
@@ -55,6 +64,11 @@ export class GameStateManager {
       sats: this.currentSats,
     };
     this.setState(GAME_STATES.GAME_OVER);
+
+    // Stop skiing sound and play crash
+    soundManager.stopSkiingSwoosh();
+    soundManager.playTreeCrash();
+
     // Trigger crash animation
     if (this.onCrash) {
       this.onCrash();
@@ -68,6 +82,11 @@ export class GameStateManager {
       sats: this.currentSats,
     };
     this.setState(GAME_STATES.YETI_CAUGHT);
+
+    // Stop skiing sound and play yeti catch
+    soundManager.stopSkiingSwoosh();
+    soundManager.playYetiCatch();
+
     // Don't trigger crash animation - different death
   }
 
@@ -83,6 +102,9 @@ export class GameStateManager {
         updateWorld(dt, this.player.distance);
         updateHUD(dt, this.player.distance, this.currentSats);
 
+        // Update skiing swoosh based on speed
+        soundManager.updateSkiingSwoosh(this.player.speed);
+
         // Update yeti
         updateYeti(dt, this.player, getElapsedTime());
 
@@ -95,6 +117,7 @@ export class GameStateManager {
         const collected = collectCoinsForPlayer(this.player);
         if (collected > 0) {
           this.currentSats += collected * CONFIG.coins.satsPerCoin;
+          soundManager.playCoinCollect();
         }
 
         // Check shrub collisions - strict single shrub processing with cooldown
@@ -122,9 +145,11 @@ export class GameStateManager {
               if (this.player.speed >= CONFIG.shrubs.fireSpeedThreshold) {
                 // High speed - set shrub on fire
                 closestShrub.isOnFire = true;
+                soundManager.playShrubFire();
               } else {
                 // Low speed - slow down player
                 this.player.speed *= CONFIG.shrubs.speedSlowdown;
+                soundManager.playShrubThud();
               }
               closestShrub.processed = true;
               // Set cooldown to prevent processing another shrub immediately

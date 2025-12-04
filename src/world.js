@@ -1,4 +1,5 @@
 import { CONFIG } from './config.js';
+import { soundManager } from './sound.js';
 
 const worldState = {
   markers: [],
@@ -362,6 +363,9 @@ function initYeti(playerDistance) {
   };
 
   worldState.yetiSpawned = true;
+
+  // Play yeti appear sound
+  soundManager.playYetiAppear();
 }
 
 export function updateYeti(dt, player, elapsedTime) {
