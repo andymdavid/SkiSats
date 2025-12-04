@@ -1,5 +1,5 @@
 import { CONFIG } from './config.js';
-import { isLeftPressed, isRightPressed } from './input.js';
+import { isLeftPressed, isRightPressed, isTouchLeft, isTouchRight } from './input.js';
 
 export class Player {
   constructor() {
@@ -23,10 +23,10 @@ export class Player {
     }
 
     let horizontalInput = 0;
-    if (isLeftPressed()) {
+    if (isLeftPressed() || isTouchLeft()) {
       horizontalInput -= 1;
     }
-    if (isRightPressed()) {
+    if (isRightPressed() || isTouchRight()) {
       horizontalInput += 1;
     }
 

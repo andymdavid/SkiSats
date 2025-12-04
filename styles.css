@@ -16,6 +16,10 @@ body {
   color: #0f2a3d;
   position: relative;
   overflow: hidden;
+  /* Mobile touch optimizations */
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 #three-container {
@@ -33,4 +37,7 @@ canvas {
   height: 100vh;
   position: relative;
   z-index: 1;
+  /* Mobile touch optimizations */
+  -webkit-user-select: none;
+  user-select: none;
 }

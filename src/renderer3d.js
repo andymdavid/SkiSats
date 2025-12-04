@@ -1,5 +1,5 @@
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.161.0/build/three.module.js';
-import { isLeftPressed, isRightPressed } from './input.js';
+import { isLeftPressed, isRightPressed, isTouchLeft, isTouchRight } from './input.js';
 
 let renderer;
 let scene;
@@ -889,16 +889,35 @@ export function updatePlayer3D(player) {
     return;
   }
 
-  // Calculate lean based on input
+  // Calculate lean based on input (keyboard or touch)
+  const leftPressed = isLeftPressed();
+  const rightPressed = isRightPressed();
+
+  // Try to get touch state - with fallback to window state if imports don't work
+  let touchLeft = isTouchLeft();
+  let touchRight = isTouchRight();
+
+  // Fallback: check window-level input state directly
+  if (touchLeft === undefined || touchRight === undefined) {
+    const state = window.__inputState;
+    if (state && state.touchActive && state.touchCurrentX !== null) {
+      const screenWidth = window.innerWidth || 0;
+      touchLeft = state.touchCurrentX < screenWidth / 2;
+      touchRight = state.touchCurrentX >= screenWidth / 2;
+    } else {
+      touchLeft = false;
+      touchRight = false;
+    }
+  }
+
   let targetLean = 0;
-  if (isLeftPressed()) {
+  if (leftPressed || touchLeft) {
     targetLean = 0.35;
-  } else if (isRightPressed()) {
+  } else if (rightPressed || touchRight) {
     targetLean = -0.35;
   }
 
   // Smooth lean transition
-  const leanSpeed = 8;
   const currentLean = playerMesh.rotation.z || 0;
   playerMesh.rotation.z = currentLean + (targetLean - currentLean) * 0.15;
 

@@ -1,5 +1,5 @@
 import { CONFIG } from './config.js';
-import { wasKeyPressed } from './input.js';
+import { wasKeyPressed, wasTapped, isTouchDevice, isTouchLeft, isTouchRight } from './input.js';
 import {
   resetWorld,
   updateWorld,
@@ -74,7 +74,7 @@ export class GameStateManager {
   update(dt) {
     switch (this.currentState) {
       case GAME_STATES.MENU:
-        if (wasKeyPressed('Enter')) {
+        if (wasKeyPressed('Enter') || wasTapped()) {
           this.startRun();
         }
         break;
@@ -138,12 +138,12 @@ export class GameStateManager {
         }
         break;
       case GAME_STATES.GAME_OVER:
-        if (wasKeyPressed('Enter')) {
+        if (wasKeyPressed('Enter') || wasTapped()) {
           this.startRun();
         }
         break;
       case GAME_STATES.YETI_CAUGHT:
-        if (wasKeyPressed('Enter')) {
+        if (wasKeyPressed('Enter') || wasTapped()) {
           this.startRun();
         }
         break;
@@ -199,8 +199,13 @@ export class GameStateManager {
     ctx.fillStyle = '#fff';
     const instructionSize = Math.max(12, Math.floor(width * 0.015));
     ctx.font = `${instructionSize}px 'Press Start 2P', monospace`;
-    ctx.fillText('PRESS ENTER', width / 2, height / 2 + 40);
-    ctx.fillText('TO START', width / 2, height / 2 + 70);
+
+    if (isTouchDevice()) {
+      ctx.fillText('TAP TO START', width / 2, height / 2 + 55);
+    } else {
+      ctx.fillText('PRESS ENTER', width / 2, height / 2 + 40);
+      ctx.fillText('TO START', width / 2, height / 2 + 70);
+    }
     ctx.restore();
   }
 
@@ -232,6 +237,50 @@ export class GameStateManager {
     ctx.restore();
 
     renderHUD(ctx, width, height, this.player.distance, this.currentSats);
+
+    // Show touch control indicators on mobile
+    if (isTouchDevice()) {
+      this.renderTouchControls(ctx, width, height);
+    }
+  }
+
+  renderTouchControls(ctx, width, height) {
+    ctx.save();
+
+    // Check if touch is active for visual feedback
+    const touchingLeft = isTouchLeft();
+    const touchingRight = isTouchRight();
+
+    // Only show subtle hints, no overlays or divider line
+    // Draw arrow indicators at bottom corners
+    const arrowSize = Math.min(35, width * 0.06);
+    const arrowY = height - 80;
+    const arrowX = 60;
+
+    // Left arrow - highlight if being touched
+    ctx.fillStyle = touchingLeft ? 'rgba(255, 255, 0, 0.8)' : 'rgba(255, 255, 255, 0.25)';
+    ctx.font = `${arrowSize}px Arial`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('\u25C0', arrowX, arrowY);
+
+    // Right arrow - highlight if being touched
+    ctx.fillStyle = touchingRight ? 'rgba(255, 255, 0, 0.8)' : 'rgba(255, 255, 255, 0.25)';
+    ctx.fillText('\u25B6', width - arrowX, arrowY);
+
+    // Subtle instructions text
+    const instructionSize = Math.max(8, Math.floor(width * 0.015));
+    ctx.font = `${instructionSize}px 'Press Start 2P', monospace`;
+
+    // Left text
+    ctx.fillStyle = touchingLeft ? 'rgba(255, 255, 0, 0.8)' : 'rgba(255, 255, 255, 0.3)';
+    ctx.fillText('HOLD', arrowX, arrowY + 35);
+
+    // Right text
+    ctx.fillStyle = touchingRight ? 'rgba(255, 255, 0, 0.8)' : 'rgba(255, 255, 255, 0.3)';
+    ctx.fillText('HOLD', width - arrowX, arrowY + 35);
+
+    ctx.restore();
   }
 
   renderGameOver(ctx, { width, height }) {
@@ -273,8 +322,13 @@ export class GameStateManager {
     // Restart instruction
     ctx.font = '12px "Press Start 2P", monospace';
     ctx.fillStyle = '#fff';
-    ctx.fillText('PRESS ENTER', width / 2, height / 2 + 120);
-    ctx.fillText('TO RESTART', width / 2, height / 2 + 145);
+
+    if (isTouchDevice()) {
+      ctx.fillText('TAP TO RESTART', width / 2, height / 2 + 132);
+    } else {
+      ctx.fillText('PRESS ENTER', width / 2, height / 2 + 120);
+      ctx.fillText('TO RESTART', width / 2, height / 2 + 145);
+    }
     ctx.restore();
   }
 
@@ -320,8 +374,13 @@ export class GameStateManager {
     // Restart
     ctx.font = '12px "Press Start 2P", monospace';
     ctx.fillStyle = '#fff';
-    ctx.fillText('PRESS ENTER', width / 2, height / 2 + 140);
-    ctx.fillText('TO RESTART', width / 2, height / 2 + 165);
+
+    if (isTouchDevice()) {
+      ctx.fillText('TAP TO RESTART', width / 2, height / 2 + 152);
+    } else {
+      ctx.fillText('PRESS ENTER', width / 2, height / 2 + 140);
+      ctx.fillText('TO RESTART', width / 2, height / 2 + 165);
+    }
     ctx.restore();
   }
 }
