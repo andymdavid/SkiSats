@@ -12,6 +12,24 @@
   <body>
     <div id="three-container"></div>
     <canvas id="game-canvas"></canvas>
+    <div id="nostr-panel" class="nostr-panel">
+      <div class="nostr-panel__header">Nostr Login</div>
+      <div id="nostr-player" class="nostr-panel__npub">Loading player...</div>
+      <div class="nostr-panel__actions">
+        <button id="nostr-link-btn" type="button">Link NIP-07</button>
+        <button id="nostr-session-btn" type="button">Use Session Key</button>
+      </div>
+      <div id="nostr-status" class="nostr-panel__status"></div>
+      <div id="nostr-share" class="nostr-share" hidden>
+        <div class="nostr-share__title">Share Latest Run</div>
+        <div id="nostr-share-stats" class="nostr-share__stats"></div>
+        <button id="nostr-share-btn" type="button" disabled>Share to Nostr</button>
+        <div id="nostr-share-status" class="nostr-share__status"></div>
+      </div>
+    </div>
+    <script src="scripts/nostr/nostr-session.js"></script>
+    <script src="scripts/nostr/nostr-signers.js"></script>
+    <script src="scripts/nostr/nostr-post.js"></script>
     <script type="module" src="src/main.js"></script>
   </body>
 </html>

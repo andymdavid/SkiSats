@@ -38,6 +38,11 @@ SkiSats is a modern tribute to the classic SkiFree game, featuring:
 - Particle effects for burning shrubs
 - Smooth camera following and player animations
 
+### Nostr Login & Sharing
+- **NIP-07 Sign-In**: Link a browser Nostr extension or use the automatic in-browser session key.
+- **Score Broadcasting**: Share your latest run (distance, sats, time) to popular Nostr relays with one click.
+- **Relay Feedback**: See which relays accepted the event so you can verify delivery.
+
 ## 🕹️ Controls
 
 - **Arrow Keys** or **A/D**: Steer left and right

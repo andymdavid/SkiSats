@@ -16,6 +16,7 @@ import {
   resetPlayerAnimation,
 } from './renderer3d.js';
 import { getWorldObstacles, getWorldCoins, getWorldShrubs, getYeti } from './world.js';
+import { initNostrUI } from './nostrIntegration.js';
 
 const canvas = document.getElementById(CONFIG.canvasId);
 const ctx = canvas.getContext('2d');
@@ -38,6 +39,7 @@ window.addEventListener('resize', resizeCanvas);
 resizeCanvas();
 init3DRenderer(threeContainer, CONFIG);
 resize3DRenderer(canvas.width, canvas.height);
+initNostrUI();
 
 let lastTime = 0;
 

@@ -32,6 +32,22 @@ export class GameStateManager {
     this.yetiDistance = null;
   }
 
+  emitEvent(name, detail) {
+    if (typeof window === 'undefined') return;
+    try {
+      window.dispatchEvent(new CustomEvent(name, { detail }));
+    } catch (_) {}
+  }
+
+  notifyRunStarted() {
+    this.emitEvent('skisats-run-started', { startedAt: Date.now() });
+  }
+
+  notifyRunEnded(reason) {
+    if (!this.lastRunStats) return;
+    this.emitEvent('skisats-run-ended', { ...this.lastRunStats, reason });
+  }
+
   setState(newState) {
     this.currentState = newState;
   }
@@ -55,6 +71,8 @@ export class GameStateManager {
 
     // Start skiing swoosh sound
     soundManager.startSkiingSwoosh(this.player.speed);
+
+    this.notifyRunStarted();
   }
 
   handleGameOver() {
@@ -73,6 +91,8 @@ export class GameStateManager {
     if (this.onCrash) {
       this.onCrash();
     }
+
+    this.notifyRunEnded('obstacle');
   }
 
   handleYetiCatch() {
@@ -88,6 +108,8 @@ export class GameStateManager {
     soundManager.playYetiCatch();
 
     // Don't trigger crash animation - different death
+
+    this.notifyRunEnded('yeti');
   }
 
   update(dt) {
